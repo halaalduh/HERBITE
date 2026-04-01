@@ -2,12 +2,7 @@
 session_start();
 include 'db.php';
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.html");
-    exit();
-}
-
-if ($_SESSION['user_type'] != 'user') {
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'user') {
     header("Location: login.html");
     exit();
 }
@@ -28,7 +23,6 @@ $fullName = $user['firstName'] . " " . $user['lastName'];
 $email = $user['emailAddress'];
 $photoFileName = $user['photoFileName'];
 
-// optional counts if recipe tables already exist
 $totalRecipes = 0;
 $totalLikes = 0;
 
@@ -38,6 +32,7 @@ $checkLikesTable = $conn->query("SHOW TABLES LIKE 'likes'");
 if ($checkRecipeTable && $checkRecipeTable->num_rows > 0) {
     $recipeCountQuery = "SELECT COUNT(*) AS totalRecipes FROM recipe WHERE userID = $userId";
     $recipeCountResult = $conn->query($recipeCountQuery);
+
     if ($recipeCountResult && $recipeCountResult->num_rows > 0) {
         $totalRecipes = $recipeCountResult->fetch_assoc()['totalRecipes'];
     }
@@ -54,6 +49,7 @@ if (
         WHERE r.userID = $userId
     ";
     $likesResult = $conn->query($likesQuery);
+
     if ($likesResult && $likesResult->num_rows > 0) {
         $totalLikes = $likesResult->fetch_assoc()['totalLikes'];
     }
@@ -77,15 +73,19 @@ if (
         <a href="index.html" class="home-link" aria-label="Go to home">
           <img src="home.PNG" alt="Home">
         </a>
+
         <div class="brand">
           <img src="logo.jpg" alt="HerBite Logo">
         </div>
+
         <div class="brand-title">
           <img src="title.jpg" alt="HerBite Title">
         </div>
+
         <div class="header-right">
           <div class="welcome">Welcome <span class="name"><?php echo htmlspecialchars($user['firstName']); ?></span></div>
         </div>
+
         <div class="logout">
           <a href="logout.php">Sign-out</a>
         </div>
@@ -329,5 +329,3 @@ if (
 
 </body>
 </html>
-
-
