@@ -1,35 +1,42 @@
 <?php
 session_start();
-include 'db.php';
+include("db.php");
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
-    header("Location: login.html");
-    exit();
-}
+/* Temporary session for testing until login is finished */
+$_SESSION['id'] = 1;
+$_SESSION['userType'] = "admin";
 
-$adminId = $_SESSION['user_id'];
+$adminID = $_SESSION['id'];
 
-$adminQuery = "SELECT * FROM users WHERE id = $adminId";
-$adminResult = $conn->query($adminQuery);
+/* Get admin info */
+$adminQuery = "SELECT * FROM users WHERE id = ?";
+$stmt = $conn->prepare($adminQuery);
+$stmt->bind_param("i", $adminID);
+$stmt->execute();
+$adminResult = $stmt->get_result();
 
-if (!$adminResult || $adminResult->num_rows == 0) {
-    header("Location: login.html");
-    exit();
+if ($adminResult->num_rows == 0) {
+    die("Admin not found.");
 }
 
 $admin = $adminResult->fetch_assoc();
-$fullName = $admin['firstName'] . " " . $admin['lastName'];
-$email = $admin['emailAddress'];
 
-$blockedUsers = [];
+/* Get reported recipes */
+$reportsQuery = "SELECT report.id AS reportID,
+                        recipe.id AS recipeID,
+                        recipe.name AS recipeName,
+                        users.id AS creatorID,
+                        users.firstName,
+                        users.lastName,
+                        users.photoFileName
+                 FROM report
+                 JOIN recipe ON report.recipeID = recipe.id
+                 JOIN users ON recipe.userID = users.id";
+$reportsResult = $conn->query($reportsQuery);
+
+/* Get blocked users */
 $blockedQuery = "SELECT * FROM blockeduser";
 $blockedResult = $conn->query($blockedQuery);
-
-if ($blockedResult) {
-    while ($row = $blockedResult->fetch_assoc()) {
-        $blockedUsers[] = $row;
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -37,16 +44,15 @@ if ($blockedResult) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin | HerBite</title>
-
   <link rel="stylesheet" href="stylesheet.css">
 </head>
 <body class="admin-page">
 <div class="page">
 
-  <!-- HEADER -->
   <header class="site-header">
     <div class="header-inner">
-      <a href="index.html" class="home-link" aria-label="Go to home">
+
+      <a href="index.php" class="home-link" aria-label="Go to home">
         <img src="home.PNG" alt="Home">
       </a>
 
@@ -59,36 +65,38 @@ if ($blockedResult) {
       </div>
 
       <div class="header-right">
-        <div class="welcome">Welcome <span class="name"><?php echo htmlspecialchars($admin['firstName']); ?></span></div>
+        <div class="welcome">Welcome <span class="name"><?php echo $admin['firstName']; ?></span></div>
       </div>
 
       <div class="logout">
-        <a href="logout.php">Sign-out</a>
+        <a href="index.php">Sign-out</a>
       </div>
     </div>
   </header>
 
-  <!-- Main -->
   <main class="page-main">
 
-    <!-- My Information -->
     <section class="admin-card admin-info-card">
       <div class="admin-big-box">
         <h2>My Information</h2>
         <div class="admin-info">
           <div class="label">Name</div>
-          <div class="value"><?php echo htmlspecialchars($fullName); ?></div>
+          <div class="value">
+            <?php echo $admin['firstName'] . " " . $admin['lastName']; ?>
+          </div>
 
           <div class="label">Email address</div>
-          <div class="value"><?php echo htmlspecialchars($email); ?></div>
+          <div class="value">
+            <?php echo $admin['emailAddress']; ?>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Reported Recipes -->
     <section class="admin-card">
       <h2>Reported Recipes</h2>
 
+      <?php if ($reportsResult && $reportsResult->num_rows > 0) { ?>
       <table class="admin-table">
         <thead>
           <tr>
@@ -99,63 +107,51 @@ if ($blockedResult) {
         </thead>
 
         <tbody>
+          <?php while ($report = $reportsResult->fetch_assoc()) { ?>
           <tr>
             <td>
-              <a href="viewRecipes.html">Greek Yoghurt Bowl</a>
+              <a href="viewRecipe.php?id=<?php echo $report['recipeID']; ?>">
+                <?php echo $report['recipeName']; ?>
+              </a>
             </td>
 
             <td>
               <div class="creator-cell">
-                <img src="curly-girl.png" alt="Creator photo" class="creator-avatar square">
-                <span class="name">Hanan</span>
+                <img src="<?php echo $report['photoFileName']; ?>" alt="Creator photo" class="creator-avatar square">
+                <span class="name">
+                  <?php echo $report['firstName'] . " " . $report['lastName']; ?>
+                </span>
               </div>
             </td>
 
             <td>
-              <form class="action-form" action="#" method="get">
+              <form class="action-form" action="handleReportAction.php" method="post">
+                <input type="hidden" name="reportID" value="<?php echo $report['reportID']; ?>">
+                <input type="hidden" name="recipeID" value="<?php echo $report['recipeID']; ?>">
+                <input type="hidden" name="creatorID" value="<?php echo $report['creatorID']; ?>">
+
                 <label>
-                  <input type="radio" name="r1"> Block User
+                  <input type="radio" name="action" value="block" required> Block User
                 </label>
                 <label>
-                  <input type="radio" name="r1"> Dismiss Report
+                  <input type="radio" name="action" value="dismiss" required> Dismiss Report
                 </label>
                 <button type="submit" class="btn-small">Submit</button>
               </form>
             </td>
           </tr>
-
-          <tr>
-            <td>
-              <a href="viewRecipes.html">Avocado Glow Toast</a>
-            </td>
-
-            <td>
-              <div class="creator-cell">
-                <img src="blonde-girl.png" alt="Creator photo" class="creator-avatar square">
-                <span class="name">Reem</span>
-              </div>
-            </td>
-
-            <td>
-              <form class="action-form" action="#" method="get">
-                <label>
-                  <input type="radio" name="r2"> Block User
-                </label>
-                <label>
-                  <input type="radio" name="r2"> Dismiss Report
-                </label>
-                <button type="submit" class="btn-small">Submit</button>
-              </form>
-            </td>
-          </tr>
+          <?php } ?>
         </tbody>
       </table>
+      <?php } else { ?>
+        <p>No reports found.</p>
+      <?php } ?>
     </section>
 
-    <!-- Blocked Users -->
     <section class="admin-card">
       <h2>Blocked Users List</h2>
 
+      <?php if ($blockedResult && $blockedResult->num_rows > 0) { ?>
       <table class="admin-table">
         <thead>
           <tr>
@@ -165,25 +161,21 @@ if ($blockedResult) {
         </thead>
 
         <tbody>
-          <?php if (count($blockedUsers) > 0) { ?>
-            <?php foreach ($blockedUsers as $blocked) { ?>
-              <tr>
-                <td><?php echo htmlspecialchars($blocked['firstName']); ?></td>
-                <td><?php echo htmlspecialchars($blocked['emailAddress']); ?></td>
-              </tr>
-            <?php } ?>
-          <?php } else { ?>
-            <tr>
-              <td colspan="2">No blocked users.</td>
-            </tr>
+          <?php while ($blocked = $blockedResult->fetch_assoc()) { ?>
+          <tr>
+            <td><?php echo $blocked['firstName'] . " " . $blocked['lastName']; ?></td>
+            <td><?php echo $blocked['emailAddress']; ?></td>
+          </tr>
           <?php } ?>
         </tbody>
       </table>
+      <?php } else { ?>
+        <p>No blocked users found.</p>
+      <?php } ?>
     </section>
 
   </main>
 
-  <!-- FOOTER -->
   <footer class="site-footer">
     <div class="footer-inner">
       <div class="footer-col">
@@ -212,6 +204,7 @@ if ($blockedResult) {
       © 2026 HerBite. All rights reserved.
     </div>
   </footer>
+
 </div>
 </body>
 </html>
