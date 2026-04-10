@@ -2,8 +2,8 @@
 session_start();
 include "db.php";
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'user') {
-    header("Location: login.php");
-    exit();
+   header("Location: login.php?error=unauthorized");
+exit();
 }
 
 $user_id = (int) $_SESSION['user_id'];
