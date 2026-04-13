@@ -1,6 +1,12 @@
 <?php
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 session_start();
 include 'db.php';
+
+
+
 
 $firstName = $_POST['firstName'];
 $lastName = $_POST['lastName'];
