@@ -104,7 +104,7 @@ $userPhoto = !empty($user['photoFileName']) ? $user['photoFileName'] : 'default.
   <main class="page">
     <header class="site-header">
       <div class="header-inner">
-        <a href="index.php" class="home-link" aria-label="Go to home">
+        <a href="index.html" class="home-link" aria-label="Go to home">
           <img src="home.PNG" alt="Home">
         </a>
 
