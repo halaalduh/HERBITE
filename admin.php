@@ -2,11 +2,12 @@
 session_start();
 include("db.php");
 
-/* Temporary session for testing until login is finished */
-$_SESSION['id'] = 1;
-$_SESSION['userType'] = "admin";
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != "admin") {
+    header("Location: login.html");
+    exit();
+}
 
-$adminID = $_SESSION['id'];
+$adminID = (int) $_SESSION['user_id'];
 
 /* Get admin info */
 $adminQuery = "SELECT * FROM users WHERE id = ?";
@@ -20,6 +21,7 @@ if ($adminResult->num_rows == 0) {
 }
 
 $admin = $adminResult->fetch_assoc();
+$stmt->close();
 
 /* Get reported recipes */
 $reportsQuery = "SELECT report.id AS reportID,
@@ -65,11 +67,11 @@ $blockedResult = $conn->query($blockedQuery);
       </div>
 
       <div class="header-right">
-        <div class="welcome">Welcome <span class="name"><?php echo $admin['firstName']; ?></span></div>
+        <div class="welcome">Welcome <span class="name"><?php echo htmlspecialchars($admin['firstName']); ?></span></div>
       </div>
 
       <div class="logout">
-        <a href="index.php">Sign-out</a>
+        <a href="logout.php">Sign-out</a>
       </div>
     </div>
   </header>
@@ -82,12 +84,12 @@ $blockedResult = $conn->query($blockedQuery);
         <div class="admin-info">
           <div class="label">Name</div>
           <div class="value">
-            <?php echo $admin['firstName'] . " " . $admin['lastName']; ?>
+            <?php echo htmlspecialchars($admin['firstName'] . " " . $admin['lastName']); ?>
           </div>
 
           <div class="label">Email address</div>
           <div class="value">
-            <?php echo $admin['emailAddress']; ?>
+            <?php echo htmlspecialchars($admin['emailAddress']); ?>
           </div>
         </div>
       </div>
@@ -111,15 +113,15 @@ $blockedResult = $conn->query($blockedQuery);
           <tr>
             <td>
               <a href="viewRecipe.php?id=<?php echo $report['recipeID']; ?>">
-                <?php echo $report['recipeName']; ?>
+                <?php echo htmlspecialchars($report['recipeName']); ?>
               </a>
             </td>
 
             <td>
               <div class="creator-cell">
-                <img src="<?php echo $report['photoFileName']; ?>" alt="Creator photo" class="creator-avatar square">
+                <img src="<?php echo htmlspecialchars(!empty($report['photoFileName']) ? $report['photoFileName'] : 'default.png'); ?>" alt="Creator photo" class="creator-avatar square">
                 <span class="name">
-                  <?php echo $report['firstName'] . " " . $report['lastName']; ?>
+                  <?php echo htmlspecialchars($report['firstName'] . " " . $report['lastName']); ?>
                 </span>
               </div>
             </td>
@@ -163,8 +165,8 @@ $blockedResult = $conn->query($blockedQuery);
         <tbody>
           <?php while ($blocked = $blockedResult->fetch_assoc()) { ?>
           <tr>
-            <td><?php echo $blocked['firstName'] . " " . $blocked['lastName']; ?></td>
-            <td><?php echo $blocked['emailAddress']; ?></td>
+            <td><?php echo htmlspecialchars($blocked['firstName'] . " " . $blocked['lastName']); ?></td>
+            <td><?php echo htmlspecialchars($blocked['emailAddress']); ?></td>
           </tr>
           <?php } ?>
         </tbody>

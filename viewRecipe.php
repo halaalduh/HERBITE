@@ -2,22 +2,32 @@
 session_start();
 include("db.php");
 
-/* Temporary session for testing until login is finished */
-$_SESSION['id'] = 1;
-$_SESSION['userType'] = "user";
-$_SESSION['firstName'] = "Joud";
-
-if (!isset($_GET['id'])) {
-    die("Recipe ID is missing.");
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.html");
+    exit();
 }
 
-$recipeID = $_GET['id'];
-$userID = $_SESSION['id'];
-$userType = $_SESSION['userType'];
+$userID = (int) $_SESSION['user_id'];
+$userType = $_SESSION['user_type'] ?? 'user';
+$recipeID = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
-$recipeQuery = "SELECT recipe.*, 
-                       users.firstName, 
-                       users.lastName, 
+if ($recipeID <= 0) {
+    die("Invalid recipe ID.");
+}
+
+/* current user info */
+$userQuery = "SELECT * FROM users WHERE id = ?";
+$stmt = $conn->prepare($userQuery);
+$stmt->bind_param("i", $userID);
+$stmt->execute();
+$userResult = $stmt->get_result();
+$currentUser = $userResult->fetch_assoc();
+$stmt->close();
+
+/* recipe info + creator + category */
+$recipeQuery = "SELECT recipe.*,
+                       users.firstName,
+                       users.lastName,
                        users.photoFileName AS creatorPhoto,
                        recipecategory.categoryName
                 FROM recipe
@@ -34,46 +44,79 @@ if ($recipeResult->num_rows == 0) {
 }
 
 $recipe = $recipeResult->fetch_assoc();
+$stmt->close();
 
-$likesCountQuery = "SELECT COUNT(*) AS totalLikes FROM likes WHERE recipeID = ?";
-$stmt = $conn->prepare($likesCountQuery);
+/* likes count */
+$likesQuery = "SELECT COUNT(*) AS totalLikes FROM likes WHERE recipeID = ?";
+$stmt = $conn->prepare($likesQuery);
 $stmt->bind_param("i", $recipeID);
 $stmt->execute();
-$likesCountResult = $stmt->get_result();
-$likesCount = $likesCountResult->fetch_assoc()['totalLikes'];
+$likesResult = $stmt->get_result();
+$likesRow = $likesResult->fetch_assoc();
+$totalLikes = $likesRow['totalLikes'] ?? 0;
+$stmt->close();
 
+/* ingredients */
+$ingredientsQuery = "SELECT ingredientName, quantity
+                     FROM recipeingredient
+                     WHERE recipeID = ?
+                     ORDER BY id ASC";
+$stmt = $conn->prepare($ingredientsQuery);
+$stmt->bind_param("i", $recipeID);
+$stmt->execute();
+$ingredientsResult = $stmt->get_result();
+$stmt->close();
+
+/* instructions */
+$instructionsQuery = "SELECT stepNumber, instructionText
+                      FROM recipeinstruction
+                      WHERE recipeID = ?
+                      ORDER BY stepNumber ASC, id ASC";
+$stmt = $conn->prepare($instructionsQuery);
+$stmt->bind_param("i", $recipeID);
+$stmt->execute();
+$instructionsResult = $stmt->get_result();
+$stmt->close();
+
+/* comments */
+$commentsQuery = "SELECT comment.comment,
+                         comment.date,
+                         users.firstName,
+                         users.lastName,
+                         users.photoFileName
+                  FROM comment
+                  JOIN users ON comment.userID = users.id
+                  WHERE comment.recipeID = ?
+                  ORDER BY comment.date DESC, comment.id DESC";
+$stmt = $conn->prepare($commentsQuery);
+$stmt->bind_param("i", $recipeID);
+$stmt->execute();
+$commentsResult = $stmt->get_result();
+$stmt->close();
+
+/* checks */
 $likedQuery = "SELECT * FROM likes WHERE userID = ? AND recipeID = ?";
 $stmt = $conn->prepare($likedQuery);
 $stmt->bind_param("ii", $userID, $recipeID);
 $stmt->execute();
-$likedResult = $stmt->get_result();
-$alreadyLiked = ($likedResult->num_rows > 0);
+$alreadyLiked = $stmt->get_result()->num_rows > 0;
+$stmt->close();
 
 $favQuery = "SELECT * FROM favourites WHERE userID = ? AND recipeID = ?";
 $stmt = $conn->prepare($favQuery);
 $stmt->bind_param("ii", $userID, $recipeID);
 $stmt->execute();
-$favResult = $stmt->get_result();
-$alreadyFavourited = ($favResult->num_rows > 0);
+$alreadyFavourite = $stmt->get_result()->num_rows > 0;
+$stmt->close();
 
 $reportQuery = "SELECT * FROM report WHERE userID = ? AND recipeID = ?";
 $stmt = $conn->prepare($reportQuery);
 $stmt->bind_param("ii", $userID, $recipeID);
 $stmt->execute();
-$reportResult = $stmt->get_result();
-$alreadyReported = ($reportResult->num_rows > 0);
+$alreadyReported = $stmt->get_result()->num_rows > 0;
+$stmt->close();
 
-$commentsQuery = "SELECT comment.*, users.firstName, users.lastName, users.photoFileName
-                  FROM comment
-                  JOIN users ON comment.userID = users.id
-                  WHERE comment.recipeID = ?
-                  ORDER BY comment.date DESC";
-$stmt = $conn->prepare($commentsQuery);
-$stmt->bind_param("i", $recipeID);
-$stmt->execute();
-$commentsResult = $stmt->get_result();
-
-$canInteract = ($userID != $recipe['userID'] && $userType != "admin");
+$canInteract = ($userType != "admin" && $userID != $recipe['userID']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -84,40 +127,32 @@ $canInteract = ($userID != $recipe['userID'] && $userType != "admin");
   <link rel="stylesheet" href="stylesheet.css">
   <script src="Script.js"></script>
 </head>
-
-<body class="user-page view-page admin-page">
+<body class="user-page view-page admin-page header-admin">
   <div class="page">
-
-   <header class="site-header">
-    <div class="header-inner">
-
-      <div class="brand">
-        <img src="logo.jpg" alt="HerBite Logo">
-      </div>
-
-      <div class="brand-title">
-        <img src="title.jpg" alt="HerBite Title">
-      </div>
-
-      <div class="header-right">
-        <div class="welcome">
-          Welcome <span class="name"><?php echo $_SESSION['firstName']; ?></span>
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="user.php" class="home-link" aria-label="Go to home">
+          <img src="home.PNG" alt="Home">
+        </a>
+        <div class="brand">
+          <img src="logo.jpg" alt="HerBite Logo">
         </div>
-
+        <div class="brand-title">
+          <img src="title.jpg" alt="HerBite Title">
+        </div>
+        <div class="header-right">
+          <div class="welcome">Welcome <span class="name"><?php echo htmlspecialchars($currentUser['firstName']); ?></span></div>
+        </div>
         <div class="logout">
-          <a href="index.php">Sign-out</a>
+          <a href="logout.php">Sign-out</a>
         </div>
       </div>
-
-    </div>
-  </header>
+    </header>
 
     <main class="page-main">
-
       <section class="view-head">
         <div class="view-title">
-          <h2><?php echo $recipe['name']; ?></h2>
-          <p class="muted">Category: <?php echo $recipe['categoryName']; ?></p>
+          <h2><?php echo htmlspecialchars($recipe['name']); ?></h2>
         </div>
 
         <div class="view-actions">
@@ -126,21 +161,21 @@ $canInteract = ($userID != $recipe['userID'] && $userType != "admin");
           <?php if ($canInteract) { ?>
             <form action="addLike.php" method="post" style="display:inline;">
               <input type="hidden" name="recipeID" value="<?php echo $recipeID; ?>">
-              <button class="btn-small btn-ghost" type="submit" <?php if ($alreadyLiked) echo "disabled"; ?>>
+              <button class="btn-small btn-ghost" type="submit" <?php echo $alreadyLiked ? 'disabled' : ''; ?>>
                 Like
               </button>
             </form>
 
             <form action="addFavourite.php" method="post" style="display:inline;">
               <input type="hidden" name="recipeID" value="<?php echo $recipeID; ?>">
-              <button class="btn-small btn-ghost" type="submit" <?php if ($alreadyFavourited) echo "disabled"; ?>>
+              <button class="btn-small btn-ghost" type="submit" <?php echo $alreadyFavourite ? 'disabled' : ''; ?>>
                 Add to favourites
               </button>
             </form>
 
             <form action="addReport.php" method="post" style="display:inline;">
               <input type="hidden" name="recipeID" value="<?php echo $recipeID; ?>">
-              <button class="btn-small btn-danger" type="submit" <?php if ($alreadyReported) echo "disabled"; ?>>
+              <button class="btn-small btn-danger" type="submit" <?php echo $alreadyReported ? 'disabled' : ''; ?>>
                 Report
               </button>
             </form>
@@ -153,102 +188,75 @@ $canInteract = ($userID != $recipe['userID'] && $userType != "admin");
 
         <div class="overview-grid">
           <div class="overview-imgWrap">
-            <img src="<?php echo $recipe['photoFileName']; ?>" class="overview-img" alt="<?php echo $recipe['name']; ?>">
+            <img src="<?php echo htmlspecialchars(!empty($recipe['photoFileName']) ? $recipe['photoFileName'] : 'default.png'); ?>" class="overview-img" alt="<?php echo htmlspecialchars($recipe['name']); ?>">
           </div>
 
           <div class="overview-info">
             <div class="meta">
-              <span class="meta-item">Likes: <?php echo $likesCount; ?></span>
-              <span class="meta-item">
-                Video: <?php echo !empty($recipe['videoFilePath']) ? "Available" : "Not Available"; ?>
-              </span>
+              <span class="meta-item">Likes: <?php echo $totalLikes; ?></span>
             </div>
 
-            <p class="muted">
-              <?php echo $recipe['description']; ?>
-            </p>
+            <p class="muted"><strong>Category:</strong> <?php echo htmlspecialchars($recipe['categoryName'] ?? 'Uncategorized'); ?></p>
+            <p class="muted"><strong>Description:</strong> <?php echo htmlspecialchars($recipe['description']); ?></p>
 
             <?php if (!empty($recipe['videoFilePath'])) { ?>
-              <video width="320" controls>
-                <source src="<?php echo $recipe['videoFilePath']; ?>" type="video/mp4">
-                Your browser does not support the video tag.
-              </video>
+              <?php if (preg_match('/^https?:\/\//i', $recipe['videoFilePath'])) { ?>
+                <p class="muted">
+                  <strong>Video:</strong>
+                  <a class="mr-link" href="<?php echo htmlspecialchars($recipe['videoFilePath']); ?>" target="_blank">Watch video</a>
+                </p>
+              <?php } else { ?>
+                <video width="320" controls>
+                  <source src="<?php echo htmlspecialchars($recipe['videoFilePath']); ?>">
+                  Your browser does not support the video tag.
+                </video>
+              <?php } ?>
             <?php } ?>
           </div>
         </div>
       </section>
-      
+
       <section class="admin-card view-card">
         <h2>Recipe Creator</h2>
-
         <div class="creator-cell">
-          <img src="<?php echo $recipe['creatorPhoto']; ?>" alt="Creator photo" class="creator-avatar square">
+          <img src="<?php echo htmlspecialchars(!empty($recipe['creatorPhoto']) ? $recipe['creatorPhoto'] : 'default.png'); ?>" alt="Creator photo" class="creator-avatar square">
           <div>
-            <div style="font-weight:800;">
-              <?php echo $recipe['firstName'] . " " . $recipe['lastName']; ?>
-            </div>
+            <div style="font-weight:800;"><?php echo htmlspecialchars($recipe['firstName'] . ' ' . $recipe['lastName']); ?></div>
             <div class="muted small">Recipe Creator</div>
           </div>
         </div>
       </section>
 
       <section class="admin-card view-card">
-        <h2>Build the Bowl</h2>
-        <p class="muted">Press the button to add ingredients in order.</p>
+        <h2>Ingredients</h2>
+        <p class="muted">All ingredients required for this recipe.</p>
 
-        <div class="plate-cta">
-          <button id="showPlateBtn" class="btn-small btn-primary" type="button">
-            Add Ingredients
-          </button>
-          <div class="muted small">Ingredients will appear one by one.</div>
-        </div>
-
-        <div class="build-grid centered">
-          <div class="plate-panel plate-pink">
-
-            <div class="plate-stage">
-              <img src="Greek-yogurt.png" class="plate-base" alt="Greek Yogurt Bowl">
-              <div id="plateLayers" class="plate-layers"></div>
-            </div>
-
-            <div class="plate-toolbar">
-              <div class="muted small">Selected: <strong id="selectedCount">0</strong></div>
-
-              <div class="toolbar-actions">
-                <button id="resetBtn" class="btn-small btn-ghost" type="button">Reset</button>
-                <button id="startCookingBtn" class="btn-small btn-primary" type="button">
-                  Show Preparation Steps
-                </button>
-              </div>
-            </div>
-
-            <div class="bowl-divider"></div>
-
-            <div class="mini-block">
-              <h4>Ingredients List</h4>
-              <ul class="list">
-                <li>Greek yoghurt — 1 cup</li>
-                <li>Fresh fruits — mixed berries</li>
-                <li>Chia seeds — 1 tsp</li>
-                <li>Honey — 1 tsp</li>
-              </ul>
-            </div>
-
-          </div>
-        </div>
+        <?php if ($ingredientsResult->num_rows > 0) { ?>
+          <ul class="steps-list">
+            <?php while ($ingredient = $ingredientsResult->fetch_assoc()) { ?>
+              <li>
+                <?php echo htmlspecialchars($ingredient['ingredientName']); ?> — <?php echo htmlspecialchars($ingredient['quantity']); ?>
+              </li>
+            <?php } ?>
+          </ul>
+        <?php } else { ?>
+          <p class="muted">No ingredients added.</p>
+        <?php } ?>
       </section>
 
-      <section id="cookingSection" class="admin-card view-card" style="display:none;">
+      <section class="admin-card view-card">
         <h2>Preparation Steps</h2>
         <p class="muted">Quick and easy steps.</p>
 
-        <ol class="steps-list">
-          <li>Place Greek yoghurt in a bowl.</li>
-          <li>Add fresh fruits on top.</li>
-          <li>Sprinkle chia seeds evenly.</li>
-          <li>Drizzle honey over the bowl.</li>
-          <li>Serve immediately and enjoy.</li>
-        </ol>
+        <?php if ($instructionsResult->num_rows > 0) { ?>
+          <ol class="steps-list">
+            <?php while ($instruction = $instructionsResult->fetch_assoc()) { ?>
+              <li><?php echo htmlspecialchars($instruction['instructionText']); ?></li>
+            <?php } ?>
+          </ol>
+        <?php } else { ?>
+          <p class="muted">No preparation steps added.</p>
+        <?php } ?>
       </section>
 
       <section class="admin-card view-card">
@@ -265,19 +273,13 @@ $canInteract = ($userID != $recipe['userID'] && $userType != "admin");
             <?php while ($comment = $commentsResult->fetch_assoc()) { ?>
               <div class="comment">
                 <div class="comment-head">
-                  <img src="<?php echo $comment['photoFileName']; ?>" alt="User photo" class="comment-avatar">
+                  <img src="<?php echo htmlspecialchars(!empty($comment['photoFileName']) ? $comment['photoFileName'] : 'default.png'); ?>" alt="User photo" class="comment-avatar">
                   <div class="comment-meta">
-                    <div class="comment-name">
-                      <?php echo $comment['firstName'] . " " . $comment['lastName']; ?>
-                    </div>
-                    <div class="comment-time muted small">
-                      <?php echo $comment['date']; ?>
-                    </div>
+                    <div class="comment-name"><?php echo htmlspecialchars($comment['firstName'] . ' ' . $comment['lastName']); ?></div>
+                    <div class="comment-time muted small"><?php echo htmlspecialchars($comment['date']); ?></div>
                   </div>
                 </div>
-                <div class="comment-body">
-                  <?php echo $comment['comment']; ?>
-                </div>
+                <div class="comment-body"><?php echo htmlspecialchars($comment['comment']); ?></div>
               </div>
             <?php } ?>
           <?php } else { ?>
@@ -285,7 +287,6 @@ $canInteract = ($userID != $recipe['userID'] && $userType != "admin");
           <?php } ?>
         </div>
       </section>
-
     </main>
 
     <footer class="site-footer">
@@ -296,14 +297,12 @@ $canInteract = ($userID != $recipe['userID'] && $userType != "admin");
           <p>Quick Meals</p>
           <p>Balanced Plates</p>
         </div>
-
         <div class="footer-col">
           <h4>Locations</h4>
           <p>Riyadh</p>
           <p>Jeddah</p>
           <p>Dammam</p>
         </div>
-
         <div class="footer-col">
           <h4>Contact Us</h4>
           <p>+966 5X XXX XXXX</p>
@@ -311,12 +310,10 @@ $canInteract = ($userID != $recipe['userID'] && $userType != "admin");
           <p>@HerBite</p>
         </div>
       </div>
-
       <div class="footer-bottom">
         © 2026 HerBite. All rights reserved.
       </div>
     </footer>
-
   </div>
 </body>
 </html>

@@ -137,11 +137,11 @@ document.addEventListener("DOMContentLoaded", () => {
       row.innerHTML = `
         <div>
           <label class="ar-mini">Ingredient Name</label>
-          <input class="ar-input" type="text" required>
+          <input class="ar-input" name="ingredient_name[]" type="text" data-label="Ingredient name" required>
         </div>
         <div>
           <label class="ar-mini">Quantity</label>
-          <input class="ar-input" type="text" required>
+          <input class="ar-input" name="ingredient_quantity[]" type="text" data-label="Ingredient quantity" required>
         </div>
       `;
       ingredientsWrap.appendChild(row);
@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
       row.className = "ar-row1";
       row.innerHTML = `
         <label class="ar-mini">Step ${count}</label>
-        <input class="ar-input" type="text" required>
+        <input class="ar-input" name="instruction_text[]" type="text" data-label="Instruction step" required>
       `;
       stepsWrap.appendChild(row);
     });
@@ -222,11 +222,11 @@ document.addEventListener("DOMContentLoaded", () => {
       row.innerHTML = `
         <div>
           <label class="er-mini">Ingredient Name</label>
-          <input class="er-input" type="text" required>
+          <input class="er-input" name="ingredient_name[]" type="text" required>
         </div>
         <div>
           <label class="er-mini">Quantity</label>
-          <input class="er-input" type="text" required>
+          <input class="er-input" name="ingredient_quantity[]" type="text" required>
         </div>
       `;
       ingredientsWrap.appendChild(row);
@@ -240,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
       row.className = "er-row1";
       row.innerHTML = `
         <label class="er-mini">Step ${count}</label>
-        <input class="er-input" type="text" required>
+        <input class="er-input" name="instruction_text[]" type="text" required>
       `;
       stepsWrap.appendChild(row);
     });
