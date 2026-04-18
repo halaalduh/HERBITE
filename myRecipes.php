@@ -126,7 +126,7 @@ if (!empty($recipeIds)) {
                   ?>
                     <tr>
                       <td>
-                        <a class="mr-recipe" href="viewRecipe.php?id=<?php echo $recipeId; ?>">
+                        <a class="mr-recipe" href="viewRecipe.html?id=<?php echo $recipeId; ?>">
                           <span class="mr-thumb">
                             <img src="<?php echo h($recipe['photoFileName'] ?: 'default.png'); ?>" alt="<?php echo h($recipe['name']); ?>">
                           </span>
