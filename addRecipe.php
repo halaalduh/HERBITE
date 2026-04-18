@@ -4,6 +4,12 @@ include 'recipe_helpers.php';
 
 $user = require_user_login($conn);
 $categoriesResult = $conn->query("SELECT id, categoryName FROM recipecategory ORDER BY categoryName ASC");
+$formError = '';
+if (($_GET['error'] ?? '') === 'required') {
+    $formError = 'Please fill in all required fields. The video is optional.';
+} elseif (($_GET['error'] ?? '') === 'photo') {
+    $formError = 'Please add a recipe photo. The video is optional.';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,6 +59,10 @@ $categoriesResult = $conn->query("SELECT id, categoryName FROM recipecategory OR
           </div>
 
           <form id="addRecipeForm" action="saveRecipe.php" method="post" enctype="multipart/form-data" novalidate>
+            <div id="recipeFormMessage" class="ar-form-message<?php echo $formError === '' ? '' : ' is-visible'; ?>" role="alert" aria-live="polite">
+              <?php echo h($formError); ?>
+            </div>
+
             <div class="ar-step is-active" data-step="0">
               <div class="ar-grid2">
                 <div>
@@ -160,20 +170,45 @@ $categoriesResult = $conn->query("SELECT id, categoryName FROM recipecategory OR
       const form = document.getElementById("addRecipeForm");
       if (!form) return;
 
+      const message = document.getElementById("recipeFormMessage");
+      const tabs = Array.from(document.querySelectorAll(".ar-tab"));
+
+      function showMissingMessage(missingFields) {
+        if (!message) return;
+
+        const names = missingFields.map(field => field.dataset.label || "Required field");
+        message.textContent = "Please fill in the required fields: " + names.join(", ") + ". Video is optional.";
+        message.classList.add("is-visible");
+      }
+
       form.addEventListener("submit", function (event) {
         const requiredFields = form.querySelectorAll("input[required], select[required], textarea[required]");
+        const missingFields = [];
 
         for (const field of requiredFields) {
           const isFile = field.type === "file";
           const isEmpty = isFile ? field.files.length === 0 : field.value.trim() === "";
 
           if (isEmpty) {
-            event.preventDefault();
-            const label = field.dataset.label || "This field";
-            alert(label + " is required.");
-            field.focus();
-            return;
+            missingFields.push(field);
           }
+        }
+
+        if (missingFields.length > 0) {
+          event.preventDefault();
+          showMissingMessage(missingFields);
+
+          const firstStep = missingFields[0].closest(".ar-step");
+          if (firstStep) {
+            const stepIndex = Number(firstStep.dataset.step);
+            const tab = tabs.find(item => Number(item.dataset.step) === stepIndex);
+            if (tab) tab.click();
+          }
+
+          missingFields[0].focus();
+        } else if (message) {
+          message.classList.remove("is-visible");
+          message.textContent = "";
         }
       });
     });
