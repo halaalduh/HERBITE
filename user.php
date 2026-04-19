@@ -2,8 +2,8 @@
 session_start();
 include "db.php";
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'user') {
-   header("Location: login.php?error=unauthorized");
-exit();
+    header("Location: login.php");
+    exit();
 }
 
 $user_id = (int) $_SESSION['user_id'];
@@ -104,7 +104,7 @@ $userPhoto = !empty($user['photoFileName']) ? $user['photoFileName'] : 'default.
   <main class="page">
     <header class="site-header">
       <div class="header-inner">
-        <a href="index.php" class="home-link" aria-label="Go to home">
+        <a href="index.html" class="home-link" aria-label="Go to home">
           <img src="home.PNG" alt="Home">
         </a>
 

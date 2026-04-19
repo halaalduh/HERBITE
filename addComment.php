@@ -2,19 +2,24 @@
 session_start();
 include("db.php");
 
-$_SESSION['id'] = 1;
-$_SESSION['userType'] = "user";
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.html");
+    exit();
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $recipeID = $_POST['recipeID'];
-    $userID = $_SESSION['id'];
-    $commentText = $_POST['comment'];
+    $recipeID = (int) $_POST['recipeID'];
+    $userID = (int) $_SESSION['user_id'];
+    $commentText = trim($_POST['comment']);
     $date = date("Y-m-d H:i:s");
 
-    $query = "INSERT INTO comment (recipeID, userID, comment, date) VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("iiss", $recipeID, $userID, $commentText, $date);
-    $stmt->execute();
+    if ($commentText != "") {
+        $query = "INSERT INTO comment (recipeID, userID, comment, date) VALUES (?, ?, ?, ?)";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("iiss", $recipeID, $userID, $commentText, $date);
+        $stmt->execute();
+        $stmt->close();
+    }
 
     header("Location: viewRecipe.php?id=" . $recipeID);
     exit();
