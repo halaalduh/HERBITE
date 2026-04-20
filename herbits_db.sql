@@ -344,3 +344,26 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+INSERT INTO users (firstName, lastName, emailAddress)
+VALUES 
+('Khaled', 'Ahmed', 'khaled@gmail.com'),
+('Fahad', 'Ali', 'fahad@gmail.com');
+
+INSERT INTO likes (userID, recipeID) VALUES
+(4, 1),
+(4, 2),
+(4, 3),
+(5, 1),
+(5, 2),
+(3, 1),
+(3, 4),
+(3, 5);
+
+INSERT INTO favourites (userID, recipeID) VALUES
+(4, 1),
+(4, 2),
+(4, 7),
+(5, 1),
+(5, 4),
+(3, 2);
