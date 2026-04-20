@@ -124,7 +124,7 @@ $userPhoto = !empty($user['photoFileName']) && $user['photoFileName'] != 'defaul
         </div>
 
         <div class="logout">
-          <a href="logout.php">Sign-out</a>
+          <a href="index.html">Sign-out</a>
         </div>
       </div>
     </header>
