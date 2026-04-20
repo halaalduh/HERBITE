@@ -156,7 +156,8 @@ $canInteract = ($userType != "admin" && $userID != $recipe['userID']);
         </div>
 
         <div class="view-actions">
-          <a class="btn-small btn-ghost" href="myRecipes.php">Back</a>
+
+          <a class="btn-small btn-ghost" href="myRecipes.php">Add Recipe</a>
 
           <?php if ($canInteract) { ?>
             <form action="addLike.php" method="post" style="display:inline;">

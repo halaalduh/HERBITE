@@ -9,35 +9,32 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != "admin") {
 
 $adminID = (int) $_SESSION['user_id'];
 
-/* Get admin info */
-$adminQuery = "SELECT * FROM users WHERE id = ?";
-$stmt = $conn->prepare($adminQuery);
+/* get admin info */
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->bind_param("i", $adminID);
 $stmt->execute();
-$adminResult = $stmt->get_result();
-
-if ($adminResult->num_rows == 0) {
-    die("Admin not found.");
-}
-
-$admin = $adminResult->fetch_assoc();
+$admin = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-/* Get reported recipes */
-$reportsQuery = "SELECT report.id AS reportID,
-                        recipe.id AS recipeID,
-                        recipe.name AS recipeName,
-                        users.id AS creatorID,
-                        users.firstName,
-                        users.lastName,
-                        users.photoFileName
-                 FROM report
-                 JOIN recipe ON report.recipeID = recipe.id
-                 JOIN users ON recipe.userID = users.id";
+/* get reports */
+$reportsQuery = "
+SELECT 
+    report.id AS reportID,
+    recipe.id AS recipeID,
+    recipe.name AS recipeName,
+    users.id AS creatorID,
+    users.firstName,
+    users.lastName,
+    users.photoFileName
+FROM report
+JOIN recipe ON report.recipeID = recipe.id
+JOIN users ON recipe.userID = users.id
+ORDER BY report.id DESC
+";
 $reportsResult = $conn->query($reportsQuery);
 
-/* Get blocked users */
-$blockedQuery = "SELECT * FROM blockeduser";
+/* get blocked users */
+$blockedQuery = "SELECT * FROM blockeduser ORDER BY id DESC";
 $blockedResult = $conn->query($blockedQuery);
 ?>
 <!DOCTYPE html>
@@ -47,6 +44,43 @@ $blockedResult = $conn->query($blockedQuery);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin | HerBite</title>
   <link rel="stylesheet" href="stylesheet.css">
+  <style>
+    .action-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .action-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .action-form button {
+      margin-top: 6px;
+    }
+
+    .creator-name {
+      white-space: nowrap;
+    }
+
+    .recipe-link {
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .recipe-link:hover {
+      text-decoration: underline;
+    }
+
+    .admin-table td,
+    .admin-table th {
+      vertical-align: middle;
+    }
+  </style>
 </head>
 <body class="admin-page">
 <div class="page">
@@ -54,45 +88,37 @@ $blockedResult = $conn->query($blockedQuery);
   <header class="site-header">
     <div class="header-inner">
 
-      <a href="index.php" class="home-link" aria-label="Go to home">
+      <a href="index.html" class="home-link">
         <img src="home.PNG" alt="Home">
       </a>
 
       <div class="brand">
-        <img src="logo.jpg" alt="HerBite Logo">
+        <img src="logo.jpg" alt="Logo">
       </div>
 
       <div class="brand-title">
-        <img src="title.jpg" alt="HerBite Title">
+        <img src="title.jpg" alt="Title">
       </div>
 
       <div class="header-right">
-        <div class="welcome">Welcome <span class="name"><?php echo htmlspecialchars($admin['firstName']); ?></span></div>
+        <div class="welcome">
+          Welcome <span class="name"><?php echo htmlspecialchars($admin['firstName']); ?></span>
+        </div>
       </div>
 
       <div class="logout">
         <a href="logout.php">Sign-out</a>
       </div>
+
     </div>
   </header>
 
   <main class="page-main">
 
-    <section class="admin-card admin-info-card">
-      <div class="admin-big-box">
-        <h2>My Information</h2>
-        <div class="admin-info">
-          <div class="label">Name</div>
-          <div class="value">
-            <?php echo htmlspecialchars($admin['firstName'] . " " . $admin['lastName']); ?>
-          </div>
-
-          <div class="label">Email address</div>
-          <div class="value">
-            <?php echo htmlspecialchars($admin['emailAddress']); ?>
-          </div>
-        </div>
-      </div>
+    <section class="admin-card">
+      <h2>My Information</h2>
+      <p><strong>Name:</strong> <?php echo htmlspecialchars($admin['firstName'] . " " . $admin['lastName']); ?></p>
+      <p><strong>Email:</strong> <?php echo htmlspecialchars($admin['emailAddress']); ?></p>
     </section>
 
     <section class="admin-card">
@@ -100,50 +126,45 @@ $blockedResult = $conn->query($blockedQuery);
 
       <?php if ($reportsResult && $reportsResult->num_rows > 0) { ?>
       <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Recipe Name</th>
-            <th>Recipe Creator</th>
-            <th>Action</th>
-          </tr>
-        </thead>
+        <tr>
+          <th>Recipe Name</th>
+          <th>Creator</th>
+          <th>Action</th>
+        </tr>
 
-        <tbody>
-          <?php while ($report = $reportsResult->fetch_assoc()) { ?>
-          <tr>
-            <td>
-              <a href="viewRecipe.php?id=<?php echo $report['recipeID']; ?>">
-                <?php echo htmlspecialchars($report['recipeName']); ?>
-              </a>
-            </td>
+        <?php while ($row = $reportsResult->fetch_assoc()) { ?>
+        <tr>
+          <td>
+            <a class="recipe-link" href="viewRecipe.php?id=<?php echo $row['recipeID']; ?>">
+              <?php echo htmlspecialchars($row['recipeName']); ?>
+            </a>
+          </td>
 
-            <td>
-              <div class="creator-cell">
-                <img src="<?php echo htmlspecialchars(!empty($report['photoFileName']) ? $report['photoFileName'] : 'default.png'); ?>" alt="Creator photo" class="creator-avatar square">
-                <span class="name">
-                  <?php echo htmlspecialchars($report['firstName'] . " " . $report['lastName']); ?>
-                </span>
-              </div>
-            </td>
+          <td class="creator-name">
+            <?php echo htmlspecialchars($row['firstName'] . " " . $row['lastName']); ?>
+          </td>
 
-            <td>
-              <form class="action-form" action="handleReportAction.php" method="post">
-                <input type="hidden" name="reportID" value="<?php echo $report['reportID']; ?>">
-                <input type="hidden" name="recipeID" value="<?php echo $report['recipeID']; ?>">
-                <input type="hidden" name="creatorID" value="<?php echo $report['creatorID']; ?>">
+          <td>
+            <form class="action-form" action="handleReportAction.php" method="POST">
+              <input type="hidden" name="reportID" value="<?php echo $row['reportID']; ?>">
+              <input type="hidden" name="recipeID" value="<?php echo $row['recipeID']; ?>">
+              <input type="hidden" name="creatorID" value="<?php echo $row['creatorID']; ?>">
 
-                <label>
-                  <input type="radio" name="action" value="block" required> Block User
-                </label>
-                <label>
-                  <input type="radio" name="action" value="dismiss" required> Dismiss Report
-                </label>
-                <button type="submit" class="btn-small">Submit</button>
-              </form>
-            </td>
-          </tr>
-          <?php } ?>
-        </tbody>
+              <label class="action-option">
+                <input type="radio" name="action" value="block" required>
+                <span>Block User</span>
+              </label>
+
+              <label class="action-option">
+                <input type="radio" name="action" value="dismiss" required>
+                <span>Dismiss Report</span>
+              </label>
+
+              <button type="submit">Submit</button>
+            </form>
+          </td>
+        </tr>
+        <?php } ?>
       </table>
       <?php } else { ?>
         <p>No reports found.</p>
@@ -151,28 +172,24 @@ $blockedResult = $conn->query($blockedQuery);
     </section>
 
     <section class="admin-card">
-      <h2>Blocked Users List</h2>
+      <h2>Blocked Users</h2>
 
       <?php if ($blockedResult && $blockedResult->num_rows > 0) { ?>
       <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email Address</th>
-          </tr>
-        </thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+        </tr>
 
-        <tbody>
-          <?php while ($blocked = $blockedResult->fetch_assoc()) { ?>
-          <tr>
-            <td><?php echo htmlspecialchars($blocked['firstName'] . " " . $blocked['lastName']); ?></td>
-            <td><?php echo htmlspecialchars($blocked['emailAddress']); ?></td>
-          </tr>
-          <?php } ?>
-        </tbody>
+        <?php while ($row = $blockedResult->fetch_assoc()) { ?>
+        <tr>
+          <td><?php echo htmlspecialchars($row['firstName'] . " " . $row['lastName']); ?></td>
+          <td><?php echo htmlspecialchars($row['emailAddress']); ?></td>
+        </tr>
+        <?php } ?>
       </table>
       <?php } else { ?>
-        <p>No blocked users found.</p>
+        <p>No blocked users.</p>
       <?php } ?>
     </section>
 

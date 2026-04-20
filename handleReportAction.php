@@ -1,4 +1,7 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
 include("db.php");
 
@@ -7,142 +10,150 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != "admin") {
     exit();
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $reportID = (int) $_POST['reportID'];
-    $creatorID = (int) $_POST['creatorID'];
-    $action = $_POST['action'];
+if ($_SERVER["REQUEST_METHOD"] != "POST") {
+    header("Location: admin.php");
+    exit();
+}
 
-    if ($action == "dismiss") {
-        $deleteReport = "DELETE FROM report WHERE id = ?";
-        $stmt = $conn->prepare($deleteReport);
-        $stmt->bind_param("i", $reportID);
-        $stmt->execute();
-        $stmt->close();
-    }
+$reportID  = isset($_POST['reportID']) ? (int)$_POST['reportID'] : 0;
+$creatorID = isset($_POST['creatorID']) ? (int)$_POST['creatorID'] : 0;
+$action    = isset($_POST['action']) ? $_POST['action'] : '';
 
-    if ($action == "block") {
+if ($reportID <= 0 || $creatorID <= 0 || ($action != 'block' && $action != 'dismiss')) {
+    header("Location: admin.php");
+    exit();
+}
 
-        /* get user */
-        $userQuery = "SELECT * FROM users WHERE id = ?";
-        $stmt = $conn->prepare($userQuery);
-        $stmt->bind_param("i", $creatorID);
-        $stmt->execute();
-        $userResult = $stmt->get_result();
-
-        if ($userResult->num_rows > 0) {
-            $user = $userResult->fetch_assoc();
-            $stmt->close();
-
-            /* add to blocked users */
-            $insertBlocked = "INSERT INTO blockeduser (firstName, lastName, emailAddress)
-                              VALUES (?, ?, ?)";
-            $stmt = $conn->prepare($insertBlocked);
-            $stmt->bind_param("sss", $user['firstName'], $user['lastName'], $user['emailAddress']);
-            $stmt->execute();
-            $stmt->close();
-
-            /* get user recipes first for deleting files */
-            $recipesQuery = "SELECT photoFileName, videoFilePath FROM recipe WHERE userID = ?";
-            $stmt = $conn->prepare($recipesQuery);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $recipesResult = $stmt->get_result();
-
-            while ($recipe = $recipesResult->fetch_assoc()) {
-                if (!empty($recipe['photoFileName']) && file_exists($recipe['photoFileName'])) {
-                    unlink($recipe['photoFileName']);
-                }
-
-                if (!empty($recipe['videoFilePath']) && !preg_match('/^https?:\/\//i', $recipe['videoFilePath']) && file_exists($recipe['videoFilePath'])) {
-                    unlink($recipe['videoFilePath']);
-                }
-            }
-            $stmt->close();
-
-            /* delete ingredients */
-            $deleteIngredients = "DELETE recipeingredient
-                                  FROM recipeingredient
-                                  JOIN recipe ON recipeingredient.recipeID = recipe.id
-                                  WHERE recipe.userID = ?";
-            $stmt = $conn->prepare($deleteIngredients);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete instructions */
-            $deleteInstructions = "DELETE recipeinstruction
-                                   FROM recipeinstruction
-                                   JOIN recipe ON recipeinstruction.recipeID = recipe.id
-                                   WHERE recipe.userID = ?";
-            $stmt = $conn->prepare($deleteInstructions);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete reports */
-            $deleteReports = "DELETE report
-                              FROM report
-                              JOIN recipe ON report.recipeID = recipe.id
-                              WHERE recipe.userID = ?";
-            $stmt = $conn->prepare($deleteReports);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete likes */
-            $deleteLikes = "DELETE likes
-                            FROM likes
-                            JOIN recipe ON likes.recipeID = recipe.id
-                            WHERE recipe.userID = ?";
-            $stmt = $conn->prepare($deleteLikes);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete favourites */
-            $deleteFavs = "DELETE favourites
-                           FROM favourites
-                           JOIN recipe ON favourites.recipeID = recipe.id
-                           WHERE recipe.userID = ?";
-            $stmt = $conn->prepare($deleteFavs);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete comments */
-            $deleteComments = "DELETE comment
-                               FROM comment
-                               JOIN recipe ON comment.recipeID = recipe.id
-                               WHERE recipe.userID = ?";
-            $stmt = $conn->prepare($deleteComments);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete recipes */
-            $deleteRecipes = "DELETE FROM recipe WHERE userID = ?";
-            $stmt = $conn->prepare($deleteRecipes);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete all reports made by this user too */
-            $deleteUserReports = "DELETE FROM report WHERE userID = ?";
-            $stmt = $conn->prepare($deleteUserReports);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-
-            /* delete user */
-            $deleteUser = "DELETE FROM users WHERE id = ?";
-            $stmt = $conn->prepare($deleteUser);
-            $stmt->bind_param("i", $creatorID);
-            $stmt->execute();
-            $stmt->close();
-        }
-    }
+/* dismiss فقط */
+if ($action == "dismiss") {
+    $stmt = $conn->prepare("DELETE FROM report WHERE id = ?");
+    $stmt->bind_param("i", $reportID);
+    $stmt->execute();
+    $stmt->close();
 
     header("Location: admin.php");
     exit();
 }
+
+/* block */
+if ($action == "block") {
+
+    /* 1) get user info */
+    $stmt = $conn->prepare("SELECT firstName, lastName, emailAddress FROM users WHERE id = ?");
+    $stmt->bind_param("i", $creatorID);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
+    $stmt->close();
+
+    if (!$user) {
+        header("Location: admin.php");
+        exit();
+    }
+
+    /* 2) add to blockeduser if not already exists */
+    $stmt = $conn->prepare("SELECT id FROM blockeduser WHERE emailAddress = ?");
+    $stmt->bind_param("s", $user['emailAddress']);
+    $stmt->execute();
+    $checkBlocked = $stmt->get_result();
+    $alreadyBlocked = $checkBlocked->num_rows > 0;
+    $stmt->close();
+
+    if (!$alreadyBlocked) {
+        $stmt = $conn->prepare("INSERT INTO blockeduser (firstName, lastName, emailAddress) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $user['firstName'], $user['lastName'], $user['emailAddress']);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    /* 3) get all recipe ids for this user */
+    $recipeIDs = [];
+    $stmt = $conn->prepare("SELECT id FROM recipe WHERE userID = ?");
+    $stmt->bind_param("i", $creatorID);
+    $stmt->execute();
+    $recipesResult = $stmt->get_result();
+
+    while ($row = $recipesResult->fetch_assoc()) {
+        $recipeIDs[] = (int)$row['id'];
+    }
+    $stmt->close();
+
+    /* 4) delete related data for each recipe */
+    foreach ($recipeIDs as $recipeID) {
+
+        $stmt = $conn->prepare("DELETE FROM likes WHERE recipeID = ?");
+        $stmt->bind_param("i", $recipeID);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM comment WHERE recipeID = ?");
+        $stmt->bind_param("i", $recipeID);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM favourites WHERE recipeID = ?");
+        $stmt->bind_param("i", $recipeID);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM report WHERE recipeID = ?");
+        $stmt->bind_param("i", $recipeID);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM recipeingredient WHERE recipeID = ?");
+        $stmt->bind_param("i", $recipeID);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM recipeinstruction WHERE recipeID = ?");
+        $stmt->bind_param("i", $recipeID);
+        $stmt->execute();
+        $stmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM recipe WHERE id = ?");
+        $stmt->bind_param("i", $recipeID);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    /* 5) delete user's own activity */
+    $stmt = $conn->prepare("DELETE FROM likes WHERE userID = ?");
+    $stmt->bind_param("i", $creatorID);
+    $stmt->execute();
+    $stmt->close();
+
+    $stmt = $conn->prepare("DELETE FROM comment WHERE userID = ?");
+    $stmt->bind_param("i", $creatorID);
+    $stmt->execute();
+    $stmt->close();
+
+    $stmt = $conn->prepare("DELETE FROM favourites WHERE userID = ?");
+    $stmt->bind_param("i", $creatorID);
+    $stmt->execute();
+    $stmt->close();
+
+    $stmt = $conn->prepare("DELETE FROM report WHERE userID = ?");
+    $stmt->bind_param("i", $creatorID);
+    $stmt->execute();
+    $stmt->close();
+
+    /* 6) delete user */
+    $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
+    $stmt->bind_param("i", $creatorID);
+    $stmt->execute();
+    $stmt->close();
+
+    /* 7) make sure the selected report is removed too */
+    $stmt = $conn->prepare("DELETE FROM report WHERE id = ?");
+    $stmt->bind_param("i", $reportID);
+    $stmt->execute();
+    $stmt->close();
+
+    header("Location: admin.php");
+    exit();
+}
+
+header("Location: admin.php");
+exit();
 ?>

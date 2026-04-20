@@ -13,6 +13,7 @@ $categoriesResult = $conn->query("SELECT id, categoryName FROM recipecategory OR
   <title>Add Recipe | HerBite</title>
   <link rel="stylesheet" href="stylesheet.css">
 </head>
+<div id="top"></div>
 <body class="user-page header-admin">
   <div class="page">
     <header class="site-header">

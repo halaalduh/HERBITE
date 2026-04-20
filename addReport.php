@@ -7,26 +7,20 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $recipeID = (int) $_POST['recipeID'];
-    $userID = (int) $_SESSION['user_id'];
+$recipeID = $_POST['recipeID'];
+$userID = $_SESSION['user_id'];
 
-    $checkQuery = "SELECT * FROM report WHERE userID = ? AND recipeID = ?";
-    $stmt = $conn->prepare($checkQuery);
+$check = $conn->prepare("SELECT * FROM report WHERE userID=? AND recipeID=?");
+$check->bind_param("ii", $userID, $recipeID);
+$check->execute();
+$result = $check->get_result();
+
+if ($result->num_rows == 0) {
+    $stmt = $conn->prepare("INSERT INTO report (userID, recipeID) VALUES (?, ?)");
     $stmt->bind_param("ii", $userID, $recipeID);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $stmt->close();
-
-    if ($result->num_rows == 0) {
-        $query = "INSERT INTO report (userID, recipeID) VALUES (?, ?)";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("ii", $userID, $recipeID);
-        $stmt->execute();
-        $stmt->close();
-    }
-
-    header("Location: viewRecipe.php?id=" . $recipeID);
-    exit();
 }
+
+header("Location: viewRecipe.php?id=" . $recipeID);
+exit();
 ?>
