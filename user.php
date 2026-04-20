@@ -89,9 +89,16 @@ $stmt_favourites->bind_param("i", $user_id);
 $stmt_favourites->execute();
 $result_favourites = $stmt_favourites->get_result();
 
-$userPhoto = !empty($user['photoFileName']) && $user['photoFileName'] != 'default.png'
-    ? 'uploads/' . $user['photoFileName']
-    : 'default.png';?>
+$userPhoto = 'default.png';
+
+if (!empty($user['photoFileName'])) {
+    if (file_exists(__DIR__ . '/uploads/' . $user['photoFileName'])) {
+        $userPhoto = 'uploads/' . $user['photoFileName'];
+    } elseif (file_exists(__DIR__ . '/' . $user['photoFileName'])) {
+        $userPhoto = $user['photoFileName'];
+    }
+}
+?>
 <!doctype html>
 <html lang="en">
 <head>
