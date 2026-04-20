@@ -33,9 +33,11 @@ if ($conn->query($sql) === TRUE) {
         $uploadDir = __DIR__ . "/uploads/";
         $path = $uploadDir . $photoFileName;
 
-        if (move_uploaded_file($_FILES['profileImg']['tmp_name'], $path)) {
-            $conn->query("UPDATE users SET photoFileName='$photoFileName' WHERE id=$newUserId");
-        }
+      if (move_uploaded_file($_FILES['profileImg']['tmp_name'], $path)) {
+    $conn->query("UPDATE users SET photoFileName='$photoFileName' WHERE id=$newUserId");
+} else {
+    die("Upload failed");
+}
     }
 
     $_SESSION['user_id'] = $newUserId;
