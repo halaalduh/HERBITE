@@ -1,12 +1,13 @@
 <?php
 session_start();
 include "db.php";
+
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'user') {
-   header("Location: login.php?error=unauthorized");
+    header("Location: login.php");
     exit();
 }
 
-$user_id = (int) $_SESSION['user_id'];
+$user_id =(int) $_SESSION['user_id'];
 $selectedCategory = isset($_POST['categoryID']) ? (int) $_POST['categoryID'] : 0;
 
 $stmt_user = $conn->prepare("SELECT * FROM users WHERE id = ?");
@@ -34,9 +35,9 @@ $stmt_total_likes->bind_param("i", $user_id);
 $stmt_total_likes->execute();
 $totalLikes = $stmt_total_likes->get_result()->fetch_assoc()['totalLikes'] ?? 0;
 
-$result_categories = $conn->query("SELECT id, categoryName FROM recipecategory GROUP BY id, categoryName ORDER BY id ASC");
+$result_categories = $conn->query("SELECT id, categoryName FROM recipecategory ORDER BY id ASC");
 
-if ($selectedCategory > 0) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selectedCategory > 0) {
     $stmt_recipes = $conn->prepare("
         SELECT recipe.id,
                recipe.name,
