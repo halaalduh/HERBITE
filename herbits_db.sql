@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.1.2
+-- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost:8889
--- Generation Time: Apr 20, 2026 at 08:17 PM
--- Server version: 5.7.24
--- PHP Version: 8.3.1
+-- Host: localhost
+-- Generation Time: Apr 20, 2026 at 10:49 PM
+-- Server version: 10.4.28-MariaDB
+-- PHP Version: 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -32,7 +32,7 @@ CREATE TABLE `blockeduser` (
   `firstName` varchar(100) NOT NULL,
   `lastName` varchar(100) NOT NULL,
   `emailAddress` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `blockeduser`
@@ -53,9 +53,9 @@ CREATE TABLE `comment` (
   `id` int(11) NOT NULL,
   `recipeID` int(11) DEFAULT NULL,
   `userID` int(11) DEFAULT NULL,
-  `comment` text,
+  `comment` text DEFAULT NULL,
   `date` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `comment`
@@ -75,7 +75,7 @@ INSERT INTO `comment` (`id`, `recipeID`, `userID`, `comment`, `date`) VALUES
 CREATE TABLE `favourites` (
   `userID` int(11) NOT NULL,
   `recipeID` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `favourites`
@@ -96,7 +96,7 @@ CREATE TABLE `likes` (
   `userID` int(11) NOT NULL,
   `recipeID` int(11) NOT NULL,
   `id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `likes`
@@ -118,10 +118,10 @@ CREATE TABLE `recipe` (
   `userID` int(11) NOT NULL,
   `categoryID` int(11) NOT NULL,
   `name` varchar(150) NOT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `photoFileName` varchar(255) DEFAULT NULL,
   `videoFilePath` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `recipe`
@@ -142,7 +142,7 @@ INSERT INTO `recipe` (`id`, `userID`, `categoryID`, `name`, `description`, `phot
 CREATE TABLE `recipecategory` (
   `id` int(11) NOT NULL,
   `categoryName` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `recipecategory`
@@ -164,7 +164,7 @@ CREATE TABLE `recipeingredient` (
   `recipeID` int(11) NOT NULL,
   `ingredientName` varchar(150) NOT NULL,
   `quantity` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `recipeingredient`
@@ -195,7 +195,7 @@ CREATE TABLE `recipeinstruction` (
   `recipeID` int(11) NOT NULL,
   `stepNumber` int(11) NOT NULL,
   `instructionText` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `recipeinstruction`
@@ -224,7 +224,7 @@ CREATE TABLE `report` (
   `id` int(11) NOT NULL,
   `userID` int(11) DEFAULT NULL,
   `recipeID` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `report`
@@ -251,7 +251,7 @@ CREATE TABLE `users` (
   `emailAddress` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `photoFileName` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
@@ -260,10 +260,7 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `userType`, `firstName`, `lastName`, `emailAddress`, `password`, `photoFileName`) VALUES
 (1, 'admin', 'Admin', 'User', 'admin@herbite.com', '$2y$10$3ukJu3ykLTx92hPA3o63e.jGGC9wfm8DlEyYniZOXxFJ5GzJlujbS', 'admin.png'),
 (3, 'user', 'Sara', 'Ahmed', 'sara@test.com', '$2y$10$wdRXOY/zWCICx0iqU/62L.OISQS46v/xi9INeEaY4VbzcrYs5Ecoa', 'default.png'),
-(4, 'user', 'Noor', 'Ali', 'noor@test.com', '$2y$10$8ijqm7pPaxfsfQXRaadPiuxmAlWR7r5rk5RdHqzLtwTx.8Jn4syFu', 'blonde-girl.png'),
-(9, 'user', 'Khaled', 'Ahmed', 'khaled@gmail.com', '', ''),
-(10, 'user', 'Fahad', 'Ali', 'fahad@gmail.com', '', ''),
-(11, 'user', 'ra', 'an', '445202375@student.ksu.edu.sa', '$2y$10$SDdob7IrLz8.ytaiOPRVHOSlhPOStqnOOOq8h1uz18WBe6lcElUhu', 'default.png');
+(4, 'user', 'Noor', 'Ali', 'noor@test.com', '$2y$10$8ijqm7pPaxfsfQXRaadPiuxmAlWR7r5rk5RdHqzLtwTx.8Jn4syFu', 'blonde-girl.png');
 
 --
 -- Indexes for dumped tables
