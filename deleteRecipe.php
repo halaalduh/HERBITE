@@ -4,7 +4,7 @@ include 'recipe_helpers.php';
 
 $user = require_user_login($conn);
 $userId = (int) $user['id'];
-$recipeId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$recipeId = isset($_POST['id']) ? (int) $_POST['id'] : (isset($_GET['id']) ? (int) $_GET['id'] : 0);
 
 if ($recipeId <= 0) {
     redirect_to('myRecipes.php');
