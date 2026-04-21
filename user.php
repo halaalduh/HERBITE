@@ -99,7 +99,7 @@ $userPhoto = (!empty($user['photoFileName']) && $user['photoFileName'] !== 'defa
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HerBite | User Page</title>
+  <title> User Page | HerBite</title>
   <link rel="stylesheet" href="stylesheet.css" />
   <script src="Script.js" defer></script>
 </head>
