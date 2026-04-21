@@ -61,7 +61,8 @@
                     document.write("Email not found.");
                   } else if (loginError === "wrongpassword") {
                     document.write("Incorrect password.");
-                  }
+                  }else if (loginError=="unauthorized"){
+                    document.write("You must login first.")  ;}
                 </script>
               </div>
 
