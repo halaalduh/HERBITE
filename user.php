@@ -3,7 +3,7 @@ session_start();
 include "db.php";
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'user') {
-    header("Location: login.php?error=unauthorized");
+    header("Location: login.html?error=unauthorized");
     exit();
 }
 
