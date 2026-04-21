@@ -152,7 +152,7 @@ $userPhoto = (!empty($user['photoFileName']) && $user['photoFileName'] !== 'defa
         <div class="big-box">
           <div class="bar-left">
             <h2 class="bar-title">
-              <a href="myRecipes.php">My Recipes</a>
+              <a href="myRecipes.html">My Recipes</a>
             </h2>
             <p><strong>Total Recipes:</strong> <?php echo (int) $totalRecipes; ?></p>
             <p><strong>Total Likes:</strong> <?php echo (int) $totalLikes; ?></p>
